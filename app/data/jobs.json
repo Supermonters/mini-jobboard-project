@@ -1,0 +1,47 @@
+[
+  {
+    "id": "1",
+    "title": "Frontend Engineer",
+    "company": "Google",
+    "location": "Mountain View, CA",
+    "description": "Build user-facing features for Google Search using React and TypeScript.",
+    "url": "https://careers.google.com",
+    "status": null
+  },
+  {
+    "id": "2",
+    "title": "Full Stack Developer",
+    "company": "Meta",
+    "location": "Menlo Park, CA",
+    "description": "Work on Instagram's web platform with React, GraphQL, and Python.",
+    "url": "https://careers.meta.com",
+    "status": null
+  },
+  {
+    "id": "3",
+    "title": "Backend Engineer",
+    "company": "Stripe",
+    "location": "San Francisco, CA",
+    "description": "Design and build APIs for payment infrastructure using Ruby and Go.",
+    "url": "https://stripe.com/jobs",
+    "status": null
+  },
+  {
+    "id": "4",
+    "title": "Software Engineer",
+    "company": "Google",
+    "location": "New York, NY",
+    "description": "Develop cloud infrastructure tools for Google Cloud Platform.",
+    "url": "https://careers.google.com",
+    "status": null
+  },
+  {
+    "id": "5",
+    "title": "React Developer",
+    "company": "Vercel",
+    "location": "Remote",
+    "description": "Build and maintain Next.js framework and related developer tools.",
+    "url": "https://vercel.com/careers",
+    "status": null
+  }
+]
