@@ -1,22 +1,19 @@
 import type { Metadata } from "next";
-import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Job Board",
-  description: "Mini job board",
+  title: "Shortlist — a tiny job board",
+  description: "A minimal job board for tracking what you've applied to and what fits.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <body>
-        <Providers>{children}</Providers>
-      </body>
+      <body className="min-h-screen antialiased">{children}</body>
     </html>
   );
 }
