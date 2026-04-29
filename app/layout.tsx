@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Providers from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "a tiny job board",
-  description: "A minimal job board for tracking what you've applied to and what fits.",
+  description:
+    "A minimal job board for tracking what you've applied to and what fits.",
 };
 
 export default function RootLayout({
@@ -13,7 +15,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
