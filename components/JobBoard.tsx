@@ -3,11 +3,12 @@
 import { useMemo, useState } from "react";
 import { useJobs } from "@/hooks/useJobs";
 import { useResetJobs } from "@/hooks/useResetJobs";
+import { useUpdateJobStatus } from "@/hooks/useUpdateJobStatus";
 import AddJobForm from "./AddJobForm";
 import JobCard from "./JobCard";
 import JobFilters from "./JobFilters";
 import JobSheet from "./JobSheet";
-import type { Job, JobFilters as JobFiltersType } from "@/lib/types";
+import type { Job, JobFilters as JobFiltersType, JobStatus } from "@/lib/types";
 import { DEFAULT_FILTERS } from "@/lib/types";
 
 /**
@@ -33,9 +34,14 @@ export default function JobBoard() {
 
   // Filter state, lifted to this parent so both JobFilters and the grid see it.
   const [filters, setFilters] = useState<JobFiltersType>(DEFAULT_FILTERS);
-  const [activeJob, setActiveJob] = useState<Job | null>(null);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const { mutate: resetJobs, isPending: isResetting } = useResetJobs();
+  const { mutate: updateStatus } = useUpdateJobStatus();
+
+  // Derive the active job from live query data so status changes in the sheet
+  // reflect immediately instead of showing a stale snapshot.
+  const activeJob = data?.find((j) => j.id === activeJobId) ?? null;
   /**
    * Update one or more filter fields at a time.
    *
@@ -96,7 +102,11 @@ export default function JobBoard() {
   }, [data, filters]);
 
   function handleOpen(job: Job) {
-    setActiveJob(job);
+    setActiveJobId(job.id);
+  }
+
+  function handleStatusChange(id: string, status: JobStatus) {
+    updateStatus({ id, status });
   }
 function handleReset() {
   // window.confirm() is built into browsers — no library needed for a quick prompt.
@@ -169,12 +179,16 @@ function handleReset() {
         <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((job) => (
             <li key={job.id}>
-              <JobCard job={job} onOpen={handleOpen} />
+              <JobCard
+                job={job}
+                onOpen={handleOpen}
+                onStatusChange={(status) => handleStatusChange(job.id, status)}
+              />
             </li>
           ))}
         </ul>
       )}
-      <JobSheet job={activeJob} onClose={() => setActiveJob(null)} />
+      <JobSheet job={activeJob} onClose={() => setActiveJobId(null)} />
         <AddJobForm open={showAddForm} onClose={() => setShowAddForm(false)} />
 
     </main>

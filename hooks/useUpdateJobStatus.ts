@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { saveJobs } from "@/lib/storage";
+import { getJobs, saveJobs } from "@/lib/storage";
 import type { Job, JobStatus } from "@/lib/types";
 import { JOBS_QUERY_KEY } from "./useJobs";
 
@@ -45,7 +45,7 @@ export function useUpdateJobStatus() {
      * resolves to the new list of jobs.
      */
     mutationFn: async ({ id, status }) => {
-      const current = queryClient.getQueryData<Job[]>(JOBS_QUERY_KEY) ?? [];
+      const current = await getJobs();
       const updated = current.map((j) => (j.id === id ? { ...j, status } : j));
       return saveJobs(updated);
     },
