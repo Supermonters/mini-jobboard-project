@@ -1,5 +1,6 @@
 "use client";
 
+import AddJobForm from "./AddJobForm";
 import { useMemo, useState } from "react";
 import { useJobs } from "@/hooks/useJobs";
 import JobCard from "./JobCard";
@@ -32,7 +33,7 @@ export default function JobBoard() {
   // Filter state, lifted to this parent so both JobFilters and the grid see it.
   const [filters, setFilters] = useState<JobFiltersType>(DEFAULT_FILTERS);
   const [activeJob, setActiveJob] = useState<Job | null>(null);
-
+  const [showAddForm, setShowAddForm] = useState(false);
   /**
    * Update one or more filter fields at a time.
    *
@@ -99,15 +100,23 @@ export default function JobBoard() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       {/* Page header */}
-      <header className="mb-8">
-        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-muted">
-          Shortlist · v0.1
-        </p>
-        <h1 className="mt-2 font-display text-4xl font-medium tracking-tight sm:text-5xl">
-          Jobs worth <em className="italic text-accent">actually</em> applying
-          to.
-        </h1>
-      </header>
+     <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-muted">
+      Shortlist · v0.1
+    </p>
+    <h1 className="mt-2 font-display text-4xl font-medium tracking-tight sm:text-5xl">
+      Jobs worth <em className="italic text-accent">actually</em> applying to.
+    </h1>
+  </div>
+  <button
+    type="button"
+    onClick={() => setShowAddForm(true)}
+    className="self-start rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper transition hover:bg-ink-soft sm:self-auto"
+  >
+    + Add a job
+  </button>
+</header>
 
       {/* Filter bar */}
       <div className="mb-6">
@@ -146,6 +155,8 @@ export default function JobBoard() {
         </ul>
       )}
       <JobSheet job={activeJob} onClose={() => setActiveJob(null)} />
+        <AddJobForm open={showAddForm} onClose={() => setShowAddForm(false)} />
+
     </main>
   );
 }
