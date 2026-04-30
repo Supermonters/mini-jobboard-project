@@ -1,8 +1,9 @@
 "use client";
 
-import AddJobForm from "./AddJobForm";
 import { useMemo, useState } from "react";
 import { useJobs } from "@/hooks/useJobs";
+import { useResetJobs } from "@/hooks/useResetJobs";
+import AddJobForm from "./AddJobForm";
 import JobCard from "./JobCard";
 import JobFilters from "./JobFilters";
 import JobSheet from "./JobSheet";
@@ -34,6 +35,7 @@ export default function JobBoard() {
   const [filters, setFilters] = useState<JobFiltersType>(DEFAULT_FILTERS);
   const [activeJob, setActiveJob] = useState<Job | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const { mutate: resetJobs, isPending: isResetting } = useResetJobs();
   /**
    * Update one or more filter fields at a time.
    *
@@ -96,7 +98,15 @@ export default function JobBoard() {
   function handleOpen(job: Job) {
     setActiveJob(job);
   }
-
+function handleReset() {
+  // window.confirm() is built into browsers — no library needed for a quick prompt.
+  // We're doing this client-side because the storage layer is also client-side;
+  // a real backend would do this server-side and we'd skip the confirm.
+  const ok = window.confirm(
+    "Reset all jobs back to the seed list? This will discard any jobs you've added and any fit/applied status."
+  );
+  if (ok) resetJobs();
+}
   return (
     <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       {/* Page header */}
@@ -109,13 +119,23 @@ export default function JobBoard() {
       Jobs worth <em className="italic text-accent">actually</em> applying to.
     </h1>
   </div>
+  <div className="flex items-center gap-2 self-start sm:self-auto">
+  <button
+    type="button"
+    onClick={handleReset}
+    disabled={isResetting}
+    className="rounded-full px-3 py-1.5 text-sm font-medium text-ink-muted transition hover:bg-paper-sunk hover:text-ink disabled:opacity-50"
+  >
+    {isResetting ? "Resetting…" : "Reset demo"}
+  </button>
   <button
     type="button"
     onClick={() => setShowAddForm(true)}
-    className="self-start rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper transition hover:bg-ink-soft sm:self-auto"
+    className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper transition hover:bg-ink-soft"
   >
     + Add a job
   </button>
+</div>
 </header>
 
       {/* Filter bar */}
