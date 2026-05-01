@@ -1,135 +1,36 @@
-# Shortlist — Job Board
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-A client-side job-tracking board built with Next.js 15, TanStack Query, and localStorage. No backend required.
+## Getting Started
 
----
+First, run the development server:
 
-## State management
-
-| Layer | What lives there | Why |
-|---|---|---|
-| **React state** (`useState`) | Active sheet job ID, filter values, add-form visibility | UI-only — ephemeral per session, no need to cache or persist |
-| **TanStack Query** (`useQuery` / `useMutation`) | The `Job[]` list read from and written to localStorage | Provides a shared in-memory cache, optimistic updates, loading/error states, and automatic invalidation across all components |
-| **localStorage** | The canonical `Job[]` array under the key `mini_job_board.jobs.v1` | Persistent storage; survives page refresh; seeded from `lib/seed.ts` on first visit |
-
-The rule: TanStack Query is the single source of truth at runtime. localStorage is the source of truth between sessions. React state handles only transient UI concerns.
-
-Mutations (`useAddJob`, `useUpdateJobStatus`, `useResetJobs`) follow the same three-step optimistic pattern:
-
-1. `onMutate` — cancel in-flight queries, snapshot the cache, apply the change immediately so the UI responds without waiting.
-2. `mutationFn` — read from storage (not the optimistic cache), apply the change, write back.
-3. `onError` — restore the snapshot if the write fails.
-4. `onSettled` — invalidate the query so the cache re-syncs with storage.
-
----
-
-## Component / folder organization
-
-```
-app/
-  layout.tsx          — root layout, mounts <Providers>
-  page.tsx            — single route, renders <JobBoard>
-  providers.tsx       — QueryClientProvider + ReactQueryDevtools
-
-components/
-  JobBoard.tsx        — smart container; owns filter state, activeJobId, and mutations
-  JobCard.tsx         — dumb card; shows status badge next to title; emits onOpen
-  JobFilters.tsx      — dumb filter bar; emits onChange
-  JobSheet.tsx        — slide-over detail panel; owns fit/apply actions via useUpdateJobStatus
-  AddJobForm.tsx      — modal form; owns local field state and calls useAddJob on submit
-
-hooks/
-  useJobs.ts              — useQuery wrapper for getJobs
-  useAddJob.ts            — useMutation: build job → prepend → saveJobs
-  useUpdateJobStatus.ts   — useMutation: map status change → saveJobs
-  useResetJobs.ts         — useMutation: write SEED_JOBS back to storage
-
-lib/
-  types.ts            — all TypeScript types (see below)
-  storage.ts          — getJobs / saveJobs / resetJobs (localStorage, async-wrapped)
-  seed.ts             — static starter jobs shown on first visit
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-`JobBoard` is the only "smart" component — it holds state, instantiates mutations, and passes callbacks down. Everything else is props-in / events-out.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
----
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-## API design
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-There are no Route Handlers (`app/api/`). The entire data layer is client-side. The logical API is three async functions in `lib/storage.ts`:
+## Learn More
 
-```ts
-getJobs(): Promise<Job[]>
-// Reads localStorage, seeds from SEED_JOBS on first visit, returns the array.
+To learn more about Next.js, take a look at the following resources:
 
-saveJobs(jobs: Job[]): Promise<Job[]>
-// Serialises the array to localStorage and resolves with the saved value.
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-resetJobs(): Promise<Job[]>
-// Overwrites localStorage with SEED_JOBS and resolves with it.
-```
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-Simulated async delays (120 ms read / 60 ms write) are intentional — replacing the body of these three functions with real `fetch` calls requires no changes elsewhere in the app.
+## Deploy on Vercel
 
----
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-## Schema / types
-
-```ts
-type JobStatus = "none" | "good_fit" | "bad_fit" | "applied";
-
-type EmploymentType = "full_time" | "part_time" | "contract" | "internship";
-
-interface Job {
-  id: string;            // "job-<uuid>"
-  title: string;
-  company: string;
-  location: string;
-  employmentType: EmploymentType;
-  salaryRange?: string;  // free-text, e.g. "$150k – $200k"
-  description: string;
-  url?: string;
-  postedAt: string;      // ISO 8601
-  createdAt: string;     // ISO 8601, set at add-time
-  status: JobStatus;     // starts as "none"
-}
-
-// What the add form submits — id, status, and timestamps are generated by useAddJob
-type NewJobInput = Omit<Job, "id" | "status" | "createdAt" | "postedAt"> & {
-  postedAt?: string;
-};
-```
-
-There is no database. If migrating to Supabase, the equivalent table would be:
-
-```sql
-create table jobs (
-  id              text primary key,
-  title           text not null,
-  company         text not null,
-  location        text not null,
-  employment_type text not null,   -- "full_time" | "part_time" | "contract" | "internship"
-  salary_range    text,
-  description     text not null,
-  url             text,
-  posted_at       timestamptz not null default now(),
-  created_at      timestamptz not null default now(),
-  status          text not null default 'none'  -- "none" | "good_fit" | "bad_fit" | "applied"
-);
-```
-
----
-
-## Loading & errors
-
-**Loading** — on first mount, `useJobs` sets `isLoading = true` while `getJobs()` resolves. `JobBoard` renders a `<LoadingGrid>` of six skeleton cards (pulse animation, matching grid layout) so the page does not shift when real data arrives.
-
-**Empty states** — two variants, rendered when the filtered list is empty:
-- *No jobs yet* — the list itself is empty (first visit before seed, or after a full reset with no re-adds).
-- *No jobs match those filters* — filters are active but nothing passes; prompts the user to loosen them.
-
-**Fetch errors** — if `getJobs()` throws (e.g. corrupt localStorage), `isError` becomes true and `JobBoard` renders an `<ErrorState>` with the error message and a "Try again" button that calls `refetch()`. `storage.ts` also auto-heals corrupt JSON by overwriting it with seed data before throwing.
-
-**Mutation errors** — if `saveJobs()` throws, `onError` rolls back the optimistic cache update so the UI reverts to its previous state. The add form surfaces mutation errors inline below the submit button via a local `submitError` string.
-
-**Validation errors** — `AddJobForm` validates on submit: title, company, and location are required; description must be at least 20 characters; URL must begin with `http://` or `https://` if provided. Errors render inline beneath each field. Browser-native validation is disabled (`noValidate`) so all messages are fully controlled.
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
