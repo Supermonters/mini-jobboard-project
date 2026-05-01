@@ -11,15 +11,15 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). On first visit the board seeds itself with the jobs in `app/data/jobs.json`. Use **Reset demo** in the header to restore them — a confirmation dialog will prompt before discarding any added jobs or status changes.
+Open [http://localhost:3000](http://localhost:3000). On first visit the board seeds itself with 10 sample jobs from `lib/seed.ts`. Use **Reset demo** in the header to restore them — a confirmation dialog will prompt before discarding any added jobs or status changes.
 
 ---
 
 ## Data Layer
 
-**Choice: Option A** — static JSON seed file + `localStorage` for user state.
+**Choice: Option A** — static seed data + `localStorage` for user state.
 
-`app/data/jobs.json` is imported once as the initial job listings. Any jobs the user adds and all fit/apply status changes are persisted to `localStorage` under `mini_job_board.jobs.v1`, so they survive page refreshes without a server.
+`lib/seed.ts` is imported once as the initial job listings. Any jobs the user adds and all fit/apply status changes are persisted to `localStorage` under `mini_job_board.jobs.v1`, so they survive page refreshes without a server.
 
 This was chosen over the alternatives because:
 - **Over Option B (in-memory only):** localStorage costs nothing extra and means the user's work isn't lost on refresh — a basic expectation for a job tracker.
@@ -37,7 +37,7 @@ This was chosen over the alternatives because:
 
 ### How they connect
 
-`lib/storage.ts` is the only file that touches `localStorage`. It exposes three async functions (`getJobs`, `saveJobs`, `resetJobs`) with small artificial delays (120 ms read / 60 ms write) so the loading states are visible during development. Seed data is read from `app/data/jobs.json`. TanStack Query calls these functions and owns the cache; React state is used only for pure UI concerns that don't need to survive a page reload.
+`lib/storage.ts` is the only file that touches `localStorage`. It exposes three async functions (`getJobs`, `saveJobs`, `resetJobs`) with small artificial delays (120 ms read / 60 ms write) so the loading states are visible during development. Seed data lives in `lib/seed.ts`. TanStack Query calls these functions and owns the cache; React state is used only for pure UI concerns that don't need to survive a page reload.
 
 All three mutations use **optimistic updates**: the cache is updated immediately on `onMutate`, rolled back from a snapshot on `onError`, and re-validated from storage on `onSettled`.
 
@@ -51,10 +51,6 @@ app/
   page.tsx            Entry point — renders <JobBoard>
   providers.tsx       Creates QueryClient with app-wide defaults
   globals.css         Tailwind 4 + custom colour tokens
-  types/
-    job.ts            Job and JobStatus TypeScript types
-  data/
-    jobs.json         Seed job listings — restored on first visit or "Reset demo"
 
 components/
   JobBoard.tsx        Smart container: owns filters, active-job id, form toggle
@@ -67,11 +63,12 @@ hooks/
   useJobs.ts          useQuery — reads job list from storage
   useAddJob.ts        useMutation — prepends a new job
   useUpdateJobStatus.ts  useMutation — patches one job's status field
-  useResetJobs.ts     useMutation — writes jobs.json data back to storage
+  useResetJobs.ts     useMutation — writes SEED_JOBS back to storage
 
 lib/
   types.ts            Authoritative TypeScript types and constants
   storage.ts          localStorage abstraction (swap here to add a real backend)
+  seed.ts             SEED_JOBS array (10 realistic postings)
 ```
 
 **Data flow:** `page.tsx` → `JobBoard` (data + UI state) → props down to `JobCard`, `JobFilters`, `JobSheet`, `AddJobForm`. No context or global store; TanStack Query is the shared cache.
@@ -89,10 +86,10 @@ This app has **no Route Handlers** (`app/api/` is empty). All data access goes t
 | `useJobs()` | `→ UseQueryResult<Job[]>` | Reads from `localStorage`; stale time 5 min; no refetch on focus |
 | `useAddJob()` | `mutate(input: NewJobInput)` | Optimistically prepends; invalidates `["jobs"]` on settle |
 | `useUpdateJobStatus()` | `mutate({ id, status })` | Optimistically patches in-place; invalidates `["jobs"]` on settle |
-| `useResetJobs()` | `mutate()` | Writes jobs.json data; sets cache directly on success (no extra fetch) |
-| `storage.getJobs()` | `→ Promise<Job[]>` | Parses localStorage; falls back to jobs.json on first visit or corruption |
+| `useResetJobs()` | `mutate()` | Writes seed data; sets cache directly on success (no extra fetch) |
+| `storage.getJobs()` | `→ Promise<Job[]>` | Parses localStorage; falls back to seed data on first visit or corruption |
 | `storage.saveJobs(jobs)` | `→ Promise<Job[]>` | Serialises and stores; returns the saved list |
-| `storage.resetJobs()` | `→ Promise<Job[]>` | Saves jobs.json contents and returns them |
+| `storage.resetJobs()` | `→ Promise<Job[]>` | Saves SEED_JOBS and returns them |
 
 To migrate to a real backend (Supabase, a REST API, etc.) only `lib/storage.ts` needs to change; every hook and component stays the same.
 
@@ -100,19 +97,37 @@ To migrate to a real backend (Supabase, a REST API, etc.) only `lib/storage.ts` 
 
 ## Schema / Types
 
-Defined in [app/types/job.ts](app/types/job.ts).
+Defined in [lib/types.ts](lib/types.ts).
 
 ```ts
-type JobStatus = "good_fit" | "bad_fit" | "applied" | null
+type JobStatus = "none" | "good_fit" | "bad_fit" | "applied"
+
+type EmploymentType = "full_time" | "part_time" | "contract" | "internship"
 
 interface Job {
-  id: string      // unique identifier
+  id: string           // crypto.randomUUID()
   title: string
   company: string
   location: string
+  employmentType: EmploymentType
+  salaryRange?: string // e.g. "$180k – $230k"
   description: string
-  url: string     // link to original posting
-  status: JobStatus  // null = unreviewed
+  url?: string         // link to original posting
+  postedAt: string     // ISO timestamp — when the job was posted externally
+  createdAt: string    // ISO timestamp — when the user added it
+  status: JobStatus    // starts as "none"
+}
+
+// Input type accepted by AddJobForm / useAddJob
+type NewJobInput = Omit<Job, "id" | "status" | "createdAt" | "postedAt"> & {
+  postedAt?: string    // defaults to now if omitted
+}
+
+interface JobFilters {
+  query: string
+  company: string
+  status: JobStatus | "all"
+  employmentType: EmploymentType | "all"
 }
 ```
 
@@ -125,7 +140,7 @@ key:   mini_job_board.jobs.v1
 value: JSON.stringify(Job[])
 ```
 
-If the value is absent or unparseable, `storage.getJobs()` transparently initialises it from `app/data/jobs.json`.
+If the value is absent or unparseable, `storage.getJobs()` transparently initialises it from `SEED_JOBS`.
 
 ---
 
