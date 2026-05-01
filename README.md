@@ -51,10 +51,6 @@ app/
   page.tsx            Entry point — renders <JobBoard>
   providers.tsx       Creates QueryClient with app-wide defaults
   globals.css         Tailwind 4 + custom colour tokens
-  types/
-    job.ts            Job and JobStatus TypeScript types
-  data/
-    jobs.json         Seed job listings — restored on first visit or "Reset demo"
 
 components/
   JobBoard.tsx        Smart container: owns filters, active-job id, form toggle
