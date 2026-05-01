@@ -3,12 +3,11 @@
 import { useMemo, useState } from "react";
 import { useJobs } from "@/hooks/useJobs";
 import { useResetJobs } from "@/hooks/useResetJobs";
-import { useUpdateJobStatus } from "@/hooks/useUpdateJobStatus";
 import AddJobForm from "./AddJobForm";
 import JobCard from "./JobCard";
 import JobFilters from "./JobFilters";
 import JobSheet from "./JobSheet";
-import type { Job, JobFilters as JobFiltersType, JobStatus } from "@/lib/types";
+import type { Job, JobFilters as JobFiltersType } from "@/lib/types";
 import { DEFAULT_FILTERS } from "@/lib/types";
 
 /**
@@ -37,7 +36,6 @@ export default function JobBoard() {
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const { mutate: resetJobs, isPending: isResetting } = useResetJobs();
-  const { mutate: updateStatus } = useUpdateJobStatus();
 
   // Derive the active job from live query data so status changes in the sheet
   // reflect immediately instead of showing a stale snapshot.
@@ -105,10 +103,7 @@ export default function JobBoard() {
     setActiveJobId(job.id);
   }
 
-  function handleStatusChange(id: string, status: JobStatus) {
-    updateStatus({ id, status });
-  }
-function handleReset() {
+  function handleReset() {
   // window.confirm() is built into browsers — no library needed for a quick prompt.
   // We're doing this client-side because the storage layer is also client-side;
   // a real backend would do this server-side and we'd skip the confirm.
@@ -182,7 +177,6 @@ function handleReset() {
               <JobCard
                 job={job}
                 onOpen={handleOpen}
-                onStatusChange={(status) => handleStatusChange(job.id, status)}
               />
             </li>
           ))}
