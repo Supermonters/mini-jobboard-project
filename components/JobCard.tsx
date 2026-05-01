@@ -65,7 +65,7 @@ function StatusBadge({ status }: { status: JobStatus }) {
       );
     case "bad_fit":
       return (
-        <span className="shrink-0 rounded-full border border-line px-2.5 py-0.5 text-[11px] font-medium text-ink-muted">
+        <span className="shrink-0 rounded-full border border-line px-2.5 py-0.5 text-[11px] font-medium text-accent-soft bg-black">
           Not a fit
         </span>
       );

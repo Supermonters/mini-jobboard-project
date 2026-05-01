@@ -121,7 +121,7 @@ export default function JobBoard() {
       Shortlist · v0.1
     </p>
     <h1 className="mt-2 font-display text-4xl font-medium tracking-tight sm:text-5xl">
-      Jobs worth <em className="italic text-accent">actually</em> applying to.
+      Jobs board
     </h1>
   </div>
   <div className="flex items-center gap-2 self-start sm:self-auto">
